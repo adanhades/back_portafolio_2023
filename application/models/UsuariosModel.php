@@ -8,28 +8,54 @@ class UsuariosModel extends CI_Model {
 
     public function verificarUsuario($email, $password) {
         $arraySearch = array('email' => $email, 'password' => $password);
-        $resultadoAuth = $this->db->get_where('usuarios', $arraySearch)->row(0);
+		$resultadoAuth = $this->db->get_where('usuarios', $arraySearch)->row(0);
         $retorno = array();
+		$token_data = array(
+			"email" => $email,
+			"userId" => $resultadoAuth->id,
+			"userName" => $resultadoAuth->username
+		);
+		
         if ($resultadoAuth == null) {
-            return array('error' => 'Usuario o contraseña incorrectos');
+            return array('ok' => false, 'status' => 'error', 'message' => 'Usuario o contraseña incorrectos');
         } else {
             $perfiles = $this->db->query('select perfiles.* from perfiles join usuarios_perfiles on usuarios_perfiles.perfiles_id = perfiles.id where usuarios_id = ' . $resultadoAuth->id);
-            return array('perfiles' => $perfiles->result(), 'usuario' => $resultadoAuth);
-        }
+			$usuario = array(
+				"nombres" => $resultadoAuth->nombres,
+				"apellidos" => $resultadoAuth->apellidos,
+				"fullName" => $resultadoAuth->nombres . " " . $resultadoAuth->apellidos,
+				"userName" => $resultadoAuth->username,
+				"telefono" => $resultadoAuth->telefono,
+				"email" => $email,
+				"perfil"=> $perfiles->row(0),
+				"token" => $this->token($token_data)
+			);
+			$response = array(
+				"ok"=> true,	
+				"status" => "success",
+				"message" => "Login Exitoso",
+				"data" => $usuario
+			);
+		}
+        return $response;
+        // return array('perfiles' => $perfiles->result(), 'usuario' => $resultadoAuth, 'token' => $this->generarToken($arraySearch));
+        
     }
 
-    public function insertarUsuario($nombres, $apellidos, $rut, $dvrut, $logintoken, $telefono, $password, $email, $username) {
+    public function insertarUsuario($nombres, $apellidos, $rut, $dvrut, $telefono, $password, $email, $username) {
         $data = array(
             'nombres' => $nombres,
             'apellidos' => $apellidos,
             'rut' => $rut,
             'dvrut' => $dvrut,
-            'logintoken' => $this->generarToken(),
             'telefono' => $telefono,
             'password' => $password,
             'email' => $email,
-            'username' => $username
+            'username' => $username,
         );
+		$token = $this->token($data);
+		$data = array_push($data, $token);
+			
         $this->db->insert('usuarios', $data);
         return $this->db->insert_id();
     }
@@ -106,5 +132,32 @@ class UsuariosModel extends CI_Model {
     public function generarToken() {
         return bin2hex(random_bytes(16). uniqid('token'));
     }
+
+	public function token($data){
+		$jwt = new JWT();
+
+		$JwtSecretKey = "MySecretKey_Siglo21.Portafolio";
+		// $data = array(
+		// 	"email" => $this->input->post('email'),
+		// 	"password" => $this->input->post('password')
+		// );
+
+		$token = $jwt->encode($data, $JwtSecretKey, 'HS256');
+		return $token;
+	}
+
+	public function decode_token($token){
+		// $token =$this->uri->segment(3);
+		// $token = $this->input->post('token');
+		$jwt = new JWT();
+		$JwtSecretKey = "MySecretKey_Siglo21.Portafolio";
+		$decoded_token = $jwt->decode($token, $JwtSecretKey, array('HS256'));
+
+		echo '<pre>';
+		print_r($decoded_token);
+		$token1 = $jwt->jsonEncode($decoded_token);
+		print_r($token1);
+		return $token1;
+	}
 
 }

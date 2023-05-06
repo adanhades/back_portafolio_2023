@@ -463,6 +463,7 @@ $config['csrf_cookie_name'] = 'csrf_cookie_name';
 $config['csrf_expire'] = 7200;
 $config['csrf_regenerate'] = TRUE;
 $config['csrf_exclude_uris'] = array();
+$config['allowed_cors_origins'] = ['162.241.60.11'];
 
 /*
 |--------------------------------------------------------------------------

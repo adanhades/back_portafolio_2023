@@ -75,11 +75,11 @@ $query_builder = TRUE;
 
 $db['default'] = array(
 	'dsn'	=> '',
-	'hostname' => 'localhost',
-	'username' => 'root',
-	'port' => '3310',
-	'password' => '',
-	'database' => 'proyecto-titulo',
+	'hostname' => '162.241.60.11',
+	'username' => 'hadespro_admin',
+	'port' => '3306',
+	'password' => '[~~zIf54Q{@u',
+	'database' => 'hadespro_siglo21',
 	'dbdriver' => 'mysqli',
 	'dbprefix' => '',
 	'pconnect' => FALSE,

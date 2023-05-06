@@ -5,6 +5,14 @@ defined('BASEPATH') OR exit('No direct script access allowed');
 class UsuariosController extends CI_Controller {
 
     public function __construct() {
+		header('Access-Control-Allow-Origin: *');
+		header("Access-Control-Allow-Headers: X-API-KEY, Origin, X-Requested-With, Content-Type, Accept, Access-Control-Request-Method");
+		header("Access-Control-Allow-Methods: GET, POST, OPTIONS, PUT, DELETE");
+		$method = $_SERVER['REQUEST_METHOD'];
+		if($method == "OPTIONS") {
+			die();
+		}
+
         parent::__construct();
         // Cargamos el modelo
         $this->load->model('UsuariosModel');
@@ -37,25 +45,28 @@ class UsuariosController extends CI_Controller {
         // Implementar aquí el código para la función deseada
     }
 
+
+	// Método que permite al administrador agregar un usuario
     public function agregarUsuario() {
+        $this->load->model('UsuariosModel');
         // Obtenemos los datos del usuario a agregar
         $nombres = $this->input->post('nombres');
         $apellidos = $this->input->post('apellidos');
         $rut = $this->input->post('rut');
         $dvrut = $this->input->post('dvrut');
-        $logintoken = '';
+		$logintoken = '';
         $telefono = $this->input->post('telefono');
         $password = $this->input->post('password');
         $email = $this->input->post('email');
         $username = $this->input->post('username');
-        $token = $this->input->post('token');
-
+		$token = $this->input->post('token');
         // Validamos el token
-        $this->load->model('UsuariosModel');
         $perfiles = $this->UsuariosModel->obtenerPerfilesPorToken($token);
+		$token_d = $this->UsuariosModel->decode_token($token);
+		$token_d = json_decode($token_d);
         $adminEncontrado = false;
         foreach ($perfiles as $perfil) {
-            if ($perfil->nombre === 'Administrador') {
+            if ($perfil->nombre === 'Administrador de Sistema') {
                 $adminEncontrado = true;
                 break;
             }

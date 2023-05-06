@@ -4,7 +4,6 @@ defined('BASEPATH') OR exit('No direct script access allowed');
 
 class AutenticacionController extends CI_Controller {
 	function __construct() {
-
 		header('Access-Control-Allow-Origin: *');
 		header("Access-Control-Allow-Headers: X-API-KEY, Origin, X-Requested-With, Content-Type, Accept, Access-Control-Request-Method");
 		header("Access-Control-Allow-Methods: GET, POST, OPTIONS, PUT, DELETE");
@@ -30,10 +29,25 @@ class AutenticacionController extends CI_Controller {
      * @see https://codeigniter.com/userguide3/general/urls.html
      */
     public function autenticar() {
-        $this->load->model('usuariosmodel');
-        $retorno = $this->usuariosmodel->verificarUsuario($this->input->post('email'), $this->input->post('password'));
+        $this->load->model('UsuariosModel');
+
+        $retorno = $this->UsuariosModel->verificarUsuario($this->input->post('email'), $this->input->post('password'));
 		
         echo json_encode($retorno);
     }
+
+
+	public function decode_token(){
+		// $token =$this->uri->segment(3);
+		$token = $this->input->post('token');
+		$jwt = new JWT();
+		$JwtSecretKey = "MySecretKey_Siglo21.Portafolio";
+		$decoded_token = $jwt->decode($token, $JwtSecretKey, array('HS256'));
+
+		echo '<pre>';
+		print_r($decoded_token);
+		$token1 = $jwt->jsonEncode($decoded_token);
+		return $token1;
+	}
 
 }
