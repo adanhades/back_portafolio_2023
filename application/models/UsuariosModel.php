@@ -6,41 +6,53 @@ class UsuariosModel extends CI_Model {
         parent::__construct();
     }
 
+    public function verificarToken() {
+        
+    }
+
     public function verificarUsuario($email, $password) {
         $arraySearch = array('email' => $email, 'password' => $password);
-		$resultadoAuth = $this->db->get_where('usuarios', $arraySearch)->row(0);
+        $resultadoAuth = $this->db->get_where('usuarios', $arraySearch)->row(0);
         $retorno = array();
-		$token_data = array(
-			"email" => $email,
-			"userId" => $resultadoAuth->id,
-			"userName" => $resultadoAuth->username
-		);
-		
+        $token_data = array(
+            "email" => $email,
+            "userId" => $resultadoAuth->id,
+            "userName" => $resultadoAuth->username
+        );
+        $token = $this->token($token_data);
+
         if ($resultadoAuth == null) {
             return array('ok' => false, 'status' => 'error', 'message' => 'Usuario o contraseña incorrectos');
         } else {
             $perfiles = $this->db->query('select perfiles.* from perfiles join usuarios_perfiles on usuarios_perfiles.perfiles_id = perfiles.id where usuarios_id = ' . $resultadoAuth->id);
-			$usuario = array(
-				"nombres" => $resultadoAuth->nombres,
-				"apellidos" => $resultadoAuth->apellidos,
-				"fullName" => $resultadoAuth->nombres . " " . $resultadoAuth->apellidos,
-				"userName" => $resultadoAuth->username,
-				"telefono" => $resultadoAuth->telefono,
-				"email" => $email,
-				"perfil"=> $perfiles->row(0),
-				"token" => $this->token($token_data)
-			);
-			$response = array(
-				"ok"=> true,	
-				"status" => "success",
-				"message" => "Login Exitoso",
-				"data" => $usuario
-			);
-		}
+            $this->db->where('id', $resultadoAuth->id)->update('usuarios', array('logintoken' => $token));
+            $this->session->token = $token;
+            $this->session->idusuario = $resultadoAuth->id;
+            $this->session->perfil = $perfiles->result_array();
+
+            $usuario = array(
+                "id_usuario" => $resultadoAuth->id,
+                "nombres" => $resultadoAuth->nombres,
+                "apellidos" => $resultadoAuth->apellidos,
+                "fullName" => $resultadoAuth->nombres . " " . $resultadoAuth->apellidos,
+                "userName" => $resultadoAuth->username,
+                "telefono" => $resultadoAuth->telefono,
+                "email" => $email,
+                "perfil" => $perfiles->result_array(),
+                "token" => $token
+            );
+            $response = array(
+                "ok" => true,
+                "status" => "success",
+                "message" => "Login Exitoso",
+                "data" => $usuario
+            );
+        }
         return $response;
         // return array('perfiles' => $perfiles->result(), 'usuario' => $resultadoAuth, 'token' => $this->generarToken($arraySearch));
-        
     }
+    
+    
 
     public function insertarUsuario($nombres, $apellidos, $rut, $dvrut, $telefono, $password, $email, $username) {
         $data = array(
@@ -53,9 +65,8 @@ class UsuariosModel extends CI_Model {
             'email' => $email,
             'username' => $username,
         );
-		$token = $this->token($data);
-		$data = array_push($data, $token);
-			
+        $token = $this->token($data);
+
         $this->db->insert('usuarios', $data);
         return $this->db->insert_id();
     }
@@ -129,35 +140,65 @@ class UsuariosModel extends CI_Model {
         $this->db->update('usuarios', $data);
     }
 
-    public function generarToken() {
-        return bin2hex(random_bytes(16). uniqid('token'));
+    public function getTokenUsuario($id) {
+       return $this->db->select('logintoken')->from('usuarios')->where('id', $id)->get()->row(0)->logintoken;
+    }
+    
+    public function tokenValidoBBDD($token){
+         if($this->db->select('logintoken')->from('usuarios')->where('logintoken', $token)->get()->num_rows()){
+             return true;
+         } else {
+             return false;
+         }
     }
 
-	public function token($data){
-		$jwt = new JWT();
+    public function generarToken() {
+        return bin2hex(random_bytes(16) . uniqid('token'));
+    }
 
-		$JwtSecretKey = "MySecretKey_Siglo21.Portafolio";
-		// $data = array(
-		// 	"email" => $this->input->post('email'),
-		// 	"password" => $this->input->post('password')
-		// );
+    public function token($data) {
+        $jwt = new JWT();
 
-		$token = $jwt->encode($data, $JwtSecretKey, 'HS256');
-		return $token;
-	}
+        $JwtSecretKey = "MySecretKey_Siglo21.Portafolio";
+        // $data = array(
+        // 	"email" => $this->input->post('email'),
+        // 	"password" => $this->input->post('password')
+        // );
 
-	public function decode_token($token){
-		// $token =$this->uri->segment(3);
-		// $token = $this->input->post('token');
-		$jwt = new JWT();
-		$JwtSecretKey = "MySecretKey_Siglo21.Portafolio";
-		$decoded_token = $jwt->decode($token, $JwtSecretKey, array('HS256'));
+        $token = $jwt->encode($data, $JwtSecretKey, 'HS256');
+        return $token;
+    }
 
-		echo '<pre>';
-		print_r($decoded_token);
-		$token1 = $jwt->jsonEncode($decoded_token);
-		print_r($token1);
-		return $token1;
-	}
+    public function decode_token($token) {
+        // $token =$this->uri->segment(3);
+        // $token = $this->input->post('token');
+        $jwt = new JWT();
+        $JwtSecretKey = "MySecretKey_Siglo21.Portafolio";
+        $decoded_token = $jwt->decode($token, $JwtSecretKey, array('HS256'));
+
+        echo '<pre>';
+        print_r($decoded_token);
+        $token1 = $jwt->jsonEncode($decoded_token);
+        print_r($token1);
+        return $token1;
+    }
+    
+    public function verificarPerfil($perfilSearch){
+        $retorno = false;
+        foreach($this->session->perfil as $perfil){
+            if($perfil["nombre"] == $perfilSearch){
+                $retorno = true;
+            }
+        }
+        return $retorno;
+    }
+    
+    public function verificarSession($tokenRequest){
+        if ($this->tokenValidoBBDD($tokenRequest) && $this->session->token == $tokenRequest){
+            return true;
+        } else {
+            return false;
+        }
+    }
 
 }
