@@ -24,4 +24,8 @@ class Welcome extends CI_Controller {
                 $this->load->view('login');
                 $this->load->view('fragments/footer');
 	}
+        
+        public function sessinfo(){
+            echo json_encode($this->session);
+        }
 }

@@ -32,11 +32,9 @@ class AutenticacionController extends CI_Controller {
      * @see https://codeigniter.com/userguide3/general/urls.html
      */
     public function autenticar() {
-        $retorno = $this->UsuariosModel->verificarUsuario($this->input->post('email'), $this->input->post('password'));
+        $retorno = $this->UsuariosModel->autenticar($this->input->post('email'), $this->input->post('password'));
         header('Content-Type: application/json; charset=utf-8');
         echo json_encode($retorno);
-        //fullname
-        // perfil
     }
 
     public function decode_token() {
