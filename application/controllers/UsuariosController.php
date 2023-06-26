@@ -6,42 +6,12 @@ class UsuariosController extends CI_Controller {
 
     public function __construct() {
         header('Access-Control-Allow-Origin: *');
-        header("Access-Control-Allow-Headers: X-API-KEY, Origin, X-Requested-With, Content-Type, Accept, Access-Control-Request-Method");
         header("Access-Control-Allow-Methods: GET, POST, OPTIONS, PUT, DELETE");
-        $method = $_SERVER['REQUEST_METHOD'];
-        if ($method == "OPTIONS") {
-            die();
-        }
-
+        header("Access-Control-Allow-Headers: Content-Type, Content-Length, Accept-Encoding");
+        header("Access-Control-Allow-Credentials: true");
         parent::__construct();
         // Cargamos el modelo
         $this->load->model('UsuariosModel');
-        $data = $this->input->post(NULL, TRUE);
-    }
-
-    public function index() {
-        // Obtenemos el token desde el POST
-        $token = $this->input->post('token');
-
-        // Validamos si el usuario tiene el perfil de administrador
-        $perfiles = $this->UsuariosModel->obtenerPerfilesPorToken($token);
-        $es_admin = false;
-        foreach ($perfiles as $perfil) {
-            if ($perfil->nombre === 'Administrador') {
-                $es_admin = true;
-                return;
-            }
-        }
-
-        if (!$es_admin) {
-            // Si el usuario no es administrador, lanzamos un error 401
-            $this->output->set_status_header(401);
-            echo json_encode(array('error' => 'No autorizado'));
-            return;
-        }
-
-        // Si el usuario es administrador, procesamos la petición
-        // Implementar aquí el código para la función deseada
     }
 
     // Método que permite al administrador agregar un usuario
@@ -51,29 +21,14 @@ class UsuariosController extends CI_Controller {
         $apellidos = $this->input->post('apellidos');
         $rut = $this->input->post('rut');
         $dvrut = $this->input->post('dvrut');
-        $logintoken = '';
         $telefono = $this->input->post('telefono');
         $password = $this->input->post('password');
         $email = $this->input->post('email');
         $username = $this->input->post('username');
+        $idPerfil = $this->input->post('id_perfil');
         $token = $this->input->post('token');
-        // Validamos el token
-        $response = null;
-        if ($this->UsuariosModel->verificarSession($token) && $this->UsuariosModel->verificarPerfil('Administrador')) {
-            $usuarioId = $this->UsuariosModel->insertarUsuario($nombres, $apellidos, $rut, $dvrut, $logintoken, $telefono, $password, $email, $username);
-            $response = array(
-                "ok" => true,
-                "status" => "success",
-                "message" => "usuario agregado",
-                "data" => array("idusuario" => $usuarioId)
-            );
-        } else {
-            $response = array(
-                "ok" => false,
-                "status" => "invalid",
-                "message" => "Sessión o perfil inválido"
-            );
-        }
+        $response = $this->UsuariosModel->insertarUsuario($token, $nombres, $apellidos, $rut, $telefono, $password, $email, $username, $idPerfil);
+
         header('Content-Type: application/json; charset=utf-8');
         echo json_encode($response);
     }
@@ -84,28 +39,13 @@ class UsuariosController extends CI_Controller {
         $nombres = $this->input->post('nombres');
         $apellidos = $this->input->post('apellidos');
         $rut = $this->input->post('rut');
-        $dvrut = $this->input->post('dvrut');
         $telefono = $this->input->post('telefono');
         $password = $this->input->post('password');
         $email = $this->input->post('email');
         $username = $this->input->post('username');
+        $idPerfil = $this->input->post('id_perfil');
         $token = $this->input->post('token');
-        $response = null;
-        if ($this->UsuariosModel->verificarSession($token) && $this->UsuariosModel->verificarPerfil('Administrador')) {
-            $result = $this->UsuariosModel->actualizarUsuario($id, $nombres, $apellidos, $rut, $dvrut, $telefono, $password, $email, $username);
-            $response = array(
-                "ok" => true,
-                "status" => "success",
-                "message" => "usuario modificado",
-                "data" => array("filasafectadas" => $result, "id_usuario" => $id)
-            );
-        } else {
-            $response = array(
-                "ok" => false,
-                "status" => "invalid",
-                "message" => "Sessión o perfil inválido"
-            );
-        }
+        $response = $this->UsuariosModel->actualizarUsuario($token, $id, $nombres, $apellidos, $rut, $telefono, $password, $email, $username, $idPerfil);
         header('Content-Type: application/json; charset=utf-8');
         echo json_encode($response);
     }
@@ -114,22 +54,15 @@ class UsuariosController extends CI_Controller {
         // Obtenemos los datos del usuario a eliminar
         $usuarioId = $this->input->post('id');
         $token = $this->input->post('token');
-        $response = null;
-        if ($this->UsuariosModel->verificarSession($token) && $this->UsuariosModel->verificarPerfil('Administrador')) {
-            $result = $this->UsuariosModel->eliminarUsuario($usuarioId);
-            $response = array(
-                "ok" => true,
-                "status" => "success",
-                "message" => "usuario eliminado",
-                "data" => array("filasafectadas" => $result, "id_usuario" => $usuarioId)
-            );
-        } else {
-            $response = array(
-                "ok" => false,
-                "status" => "invalid",
-                "message" => "Sessión o perfil inválido"
-            );
-        }
+        $response = $this->UsuariosModel->eliminarUsuario($token, $usuarioId);
+        header('Content-Type: application/json; charset=utf-8');
+        echo json_encode($response);
+    }
+
+    public function restaurarUsuario() {
+        $usuarioId = $this->input->post('id');
+        $token = $this->input->post('token');
+        $response = $this->UsuariosModel->restaurarUsuario($token, $usuarioId);
         header('Content-Type: application/json; charset=utf-8');
         echo json_encode($response);
     }
@@ -137,24 +70,67 @@ class UsuariosController extends CI_Controller {
     public function listarUsuarios() {
         // Obtenemos el token de acceso
         $token = $this->input->post('token');
-        if ($this->UsuariosModel->verificarSession($token)) {
-            $result = $this->UsuariosModel->obtenerTodosUsuarios();
-            $response = array(
-                "ok" => true,
-                "status" => "success",
-                "message" => "listado de usuarios",
-                "data" => array("usuarios" => $result)
-            );
-        } else {
-            $response = array(
-                "ok" => false,
-                "status" => "invalid",
-                "message" => "Sessión o perfil inválido"
-            );
-        }
+        $activos = $this->input->post('estado_usuarios');
+        $result = $this->UsuariosModel->obtenerTodosUsuarios($token, $activos);
         header('Content-Type: application/json; charset=utf-8');
-        echo json_encode($response);
- 
+        echo json_encode($result);
+    }
+
+    public function asignarPerfilUsuario() {
+        $token = $this->input->post('token');
+        $idperfil = $this->input->post('id_perfil');
+        $idusuario = $this->input->post('id_usuario');
+        $result = $this->UsuariosModel->asignarPerfilAUsuario($token, $idusuario, $idperfil);
+        header('Content-Type: application/json; charset=utf-8');
+        echo json_encode($result);
+    }
+
+    public function eliminarPerfilUsuario() {
+        $token = $this->input->post('token');
+        $idperfil = $this->input->post('id_perfil');
+        $idusuario = $this->input->post('id_usuario');
+        $result = $this->UsuariosModel->eliminarPerfilDeUsuario($token, $idusuario, $idperfil);
+        header('Content-Type: application/json; charset=utf-8');
+        echo json_encode($result);
+    }
+
+    public function getTodosPerfiles() {
+        $token = $this->input->post('token');
+        $result = $this->UsuariosModel->getTodosPerfiles($token);
+        header('Content-Type: application/json; charset=utf-8');
+        echo json_encode($result);
+    }
+
+    public function getPerfilesUsuario() {
+        $token = $this->input->post('token');
+        $idUsuario = $this->input->post('id_usuario');
+        $result = $this->UsuariosModel->getTodosPerfilesUsuario($token, $idUsuario);
+        header('Content-Type: application/json; charset=utf-8');
+        echo json_encode($result);
+    }
+
+    public function perfilesActualUsuario() {
+        $token = $this->input->post('token');
+        $result = $this->UsuariosModel->getPerfilesUsuarioActual($token);
+        header('Content-Type: application/json; charset=utf-8');
+        echo json_encode($result);
+    }
+
+    public function list_user() {
+        echo json_encode($this->db->query('select * from usuarios')->result_array());
+    }
+
+    public function gteusr() {
+        echo json_encode($this->UsuariosModel->buscarPorId(3));
+    }
+
+    public function getDatosUsuario() {
+        
+        $token = $this->input->post('token');
+        $id = $this->input->post('id_usuario');
+        $result = $this->UsuariosModel->getDatosUsuario($token, $id);
+        header('Content-Type: application/json; charset=utf-8');
+        echo json_encode($result);
     }
 
 }

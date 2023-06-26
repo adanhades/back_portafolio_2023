@@ -6,12 +6,9 @@ class AutenticacionController extends CI_Controller {
 
     function __construct() {
         header('Access-Control-Allow-Origin: *');
-        header("Access-Control-Allow-Headers: X-API-KEY, Origin, X-Requested-With, Content-Type, Accept, Access-Control-Request-Method");
         header("Access-Control-Allow-Methods: GET, POST, OPTIONS, PUT, DELETE");
-        $method = $_SERVER['REQUEST_METHOD'];
-        if ($method == "OPTIONS") {
-            die();
-        }
+        header("Access-Control-Allow-Headers: Content-Type, Content-Length, Accept-Encoding");
+        header("Access-Control-Allow-Credentials: true");
         parent::__construct();
         $this->load->Model('UsuariosModel');
     }
@@ -32,11 +29,9 @@ class AutenticacionController extends CI_Controller {
      * @see https://codeigniter.com/userguide3/general/urls.html
      */
     public function autenticar() {
-        $retorno = $this->UsuariosModel->verificarUsuario($this->input->post('email'), $this->input->post('password'));
+        $retorno = $this->UsuariosModel->autenticar($this->input->post('email'), $this->input->post('password'));
         header('Content-Type: application/json; charset=utf-8');
         echo json_encode($retorno);
-        //fullname
-        // perfil
     }
 
     public function decode_token() {
